@@ -4,7 +4,7 @@
   "authors": [
     { "name": "Cynosphere", "id": "150745989836308480" }
   ],
-  "main": "src/index.tsx",
+  "main": "index.js",
   "vendetta": {
     "icon": "icon-qs-gifs"
   }
