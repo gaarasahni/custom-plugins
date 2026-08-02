@@ -1,0 +1,10 @@
+{
+  "id": "friends-in-server",
+  "name": "FriendsInServer",
+  "version": "1.0.0",
+  "description": "Adds a settings page button that lists which members of the current server are on your friends list.",
+  "authors": [
+    { "name": "Harvi" }
+  ],
+  "main": "src/index.js"
+}
