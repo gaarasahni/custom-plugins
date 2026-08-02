@@ -9,6 +9,7 @@ import {
   rmSync,
 } from "fs";
 import { join } from "path";
+import { createHash } from "crypto";
 
 const PLUGINS_DIR = "plugins";
 const DIST_DIR = "dist";
@@ -123,7 +124,22 @@ for (const folder of pluginFolders) {
     await build(buildOptions);
   }
 
-  copyFileSync(manifestPath, join(outDir, "manifest.json"));
+  /**
+   * Vendetta/Revenge/Shiggycord-family loaders verify plugin integrity by
+   * SHA-256-hashing the fetched bundle and comparing it against a `hash`
+   * field in manifest.json. Without a correct hash (or with none at all),
+   * some loader versions silently reject the plugin and report it as a
+   * failed fetch, even though the file downloaded fine.
+   *
+   * The hash must be computed AFTER the bundle is built, since it has to
+   * match the exact bytes of the built index.js — so we write a modified
+   * copy of the manifest into dist/ rather than copying the source
+   * manifest.json verbatim.
+   */
+  const builtJs = readFileSync(outFile);
+  const hash = createHash("sha256").update(builtJs).digest("hex");
+  const deployedManifest = { ...manifest, main: "index.js", hash };
+  writeFileSync(join(outDir, "manifest.json"), JSON.stringify(deployedManifest));
 
   index.push({
     id: manifest.id ?? folder,
@@ -134,7 +150,7 @@ for (const folder of pluginFolders) {
     path: `${folder}/`,
   });
 
-  console.log(`Built "${folder}" -> ${outDir}`);
+  console.log(`Built "${folder}" -> ${outDir} (hash: ${hash.slice(0, 12)}...)`);
 }
 
 writeFileSync(join(DIST_DIR, "plugins.json"), JSON.stringify(index, null, 2));
