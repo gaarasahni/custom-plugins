@@ -24,18 +24,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
+          cache: 'pnpm'
+          
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
- 
-      - name: Commit lock file
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml
-          git diff --staged --quiet || git commit -m "Add generated pnpm-lock.yaml"
-          git push
-
+        run: pnpm install --frozen-lockfile
+  
       - name: Build plugin(s)
         run: pnpm build
 
