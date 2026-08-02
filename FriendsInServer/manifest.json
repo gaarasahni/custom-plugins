@@ -6,5 +6,5 @@
   "authors": [
     { "name": "Harvi" }
   ],
-  "main": "src/index.js"
+  "main": "index.js"
 }
