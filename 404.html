@@ -1,73 +1,59 @@
 > You accessed a link that returned a 404, probably by clicking one of the plugin links. Copy the link address and add it into your Discord mod (Shiggycord, Revenge, Bunny, etc.) instead of opening it in a browser.
 
-# FriendsInServer
+# custom-plugins
 
-A Shiggycord/Vendetta-family plugin. Adds a button to its own settings page
-that lists which members of the server you're currently in are also on your
-friends list.
+My own plugins for Vendetta/Revenge/Shiggycord-family Discord mods.
 
-I couldn't find an existing plugin that does exactly this, so this is written
-from scratch against the documented Vendetta-family plugin API
-(`@vendetta/metro`, `@vendetta/metro/common`). I checked it compiles cleanly
-with TypeScript's JSX checker against that API surface, but I can't run it
-inside Discord myself, so treat it as a solid first draft rather than a
-guaranteed-working download — see "If it doesn't work" below.
+## How to install
 
-## What it does
+Paste a plugin's install link into Settings → Plugins → (add/install plugin)
+in Shiggycord, Revenge, Bunny, or any Vendetta-family client.
 
-1. Open any server in Discord.
-2. Settings → Plugins → FriendsInServer → tap **Check friends in this server**.
-3. It reads the server's member list and cross-checks it against your
-   friends list, then shows the names inline.
+## Plugins List
 
-Nothing runs automatically in the background — it only looks anything up
-when you tap the button.
+- **FriendsInServer** — Adds a settings page button that lists which members
+  of the current server are on your friends list.
+  [Install Link](https://gaarasahni.github.io/custom-plugins/FriendsInServer/)
 
-## Building it
+- **AlwaysAnimate** — Always animates guild icons and avatars, instead of
+  only animating on hover.
+  [Install Link](https://gaarasahni.github.io/custom-plugins/AlwaysAnimate/)
 
-Shiggycord (like Vendetta/Revenge) loads plugins as a built JS bundle plus a
-`manifest.json`, fetched from a URL you host — it doesn't load raw
-`.tsx` files directly. The standard way to build one is:
+## Building it yourself
+
+Plugins are built with [esbuild](https://esbuild.github.io/) via a single
+script that bundles every plugin under `plugins/*/src/index.tsx` into
+`dist/<PluginName>/`, complete with a `manifest.json` (including a SHA-256
+`hash` of the built bundle, which Vendetta-family loaders require to verify
+plugin integrity).
 
 ```bash
-git clone https://github.com/vendetta-mod/plugin-template friends-in-server
-cd friends-in-server
-# replace the generated src/index.tsx with the index.tsx from this plugin,
-# and manifest.json with the one from this plugin
 pnpm install
 pnpm build
 ```
 
-That produces a `dist/` folder with the built bundle + manifest.
+This produces a `dist/` folder with every plugin's built bundle + manifest,
+plus a top-level `dist/plugins.json` index.
 
-## Hosting it
+## Adding a new plugin
 
-Push the `dist/` output to a GitHub repo and enable GitHub Pages for it
-(same pattern other Vendetta plugin devs use). You'll end up with a URL like:
+1. Create `plugins/YourPluginName/manifest.json` and
+   `plugins/YourPluginName/src/index.tsx`.
+2. Import Discord internals via `@vendetta/metro`, `@vendetta/metro/common`,
+   `@vendetta/patcher`, `@vendetta/utils`, etc. — same as any Vendetta-family
+   plugin. The build script rewrites these into the runtime `vendetta`
+   global automatically, so you don't need to worry about how they resolve.
+3. Run `pnpm build` and confirm `dist/YourPluginName/` looks right.
+4. Push to `main` — the GitHub Actions workflow builds and deploys
+   automatically to GitHub Pages.
+
+## Hosting
+
+Deployed via GitHub Actions to the `gh-pages` branch, served at:
 
 ```
-https://YOUR_USERNAME.github.io/REPO_NAME/
+https://gaarasahni.github.io/custom-plugins/
 ```
 
-## Installing it in Shiggycord
-
-Settings → Plugins → (add/install plugin) → paste that URL.
-
-## If it doesn't work
-
-The one part of this plugin that depends on Discord's *undocumented*
-internals — not the documented plugin API — is the store lookups near the
-top of `index.tsx` (`RelationshipStore`, `GuildMemberStore`,
-`SelectedGuildStore`, `UserStore`). Those are found by guessing at method
-names (`findByProps("isFriend", "getRelationships")` etc.), and Discord can
-rename these without warning between app updates.
-
-If the button shows "Couldn't find one of Discord's internal stores" or
-just returns nobody when it should find friends, that's the thing to fix.
-The Shiggycord/Vendetta community uses a live debug console for exactly
-this — search "vendetta-debug" — which lets you run JavaScript inside the
-Discord app itself and inspect what a store actually looks like right now,
-so you can correct the `findByProps` calls to match.
-
-If you hit that and get stuck, paste the error (or what the debug console
-shows for those stores) back to me and I'll help fix the lookup.
+Each plugin lives at its own path under that root, e.g.
+`https://gaarasahni.github.io/custom-plugins/FriendsInServer/`.
