@@ -1,11 +1,1 @@
-{
-  "name": "AlwaysAnimate",
-  "description": "Always all animates guild icons and avatars.",
-  "authors": [
-    { "name": "Cynosphere", "id": "150745989836308480" }
-  ],
-  "main": "index.js",
-  "vendetta": {
-    "icon": "icon-qs-gifs"
-  }
-}
+{"name":"AlwaysAnimate","description":"Always all animates guild icons and avatars.","authors":[{"name":"Cynosphere","id":"150745989836308480"}],"main":"index.js","vendetta":{"icon":"icon-qs-gifs"},"hash":"4c70a698b594d2dbe5a912f212a178cb2a0a3581fbe789586e36790c14e5747b"}
