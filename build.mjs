@@ -8,7 +8,7 @@ import {
   copyFileSync,
   rmSync,
 } from "fs";
-import { join } from "path";
+import { join, relative } from "path";
 import { createHash } from "crypto";
 
 const PLUGINS_DIR = "plugins";
@@ -101,12 +101,36 @@ for (const folder of pluginFolders) {
   mkdirSync(outDir, { recursive: true });
   const outFile = join(outDir, "index.js");
 
+  /**
+   * esbuild's IIFE format, when built with no `globalName`, computes the
+   * entry's default export as a local variable inside the IIFE but never
+   * exposes it anywhere — the whole bundle just runs and discards its
+   * result. Vendetta-family loaders, however, expect the fetched script to
+   * evaluate (via `eval`) to the plugin object itself, meaning the final
+   * statement in the file must be a `return <exports>` inside the IIFE.
+   *
+   * We can't reference esbuild's own minified export variable directly
+   * (its name isn't stable across builds/minification), so instead we
+   * build a tiny synthetic entry that imports the real plugin file and
+   * assigns its default export to `globalThis.__pluginExport` — a name
+   * esbuild will never rename, since it's a property access, not a
+   * declared identifier. A `footer` then reads it back off `globalThis`
+   * and returns it, immediately deleting the temporary global so nothing
+   * leaks.
+   */
+  const wrapperEntry = join(outDir, "__entry.mjs");
+  const relEntry = "./" + relative(outDir, entry).replace(/\\/g, "/");
+  writeFileSync(
+    wrapperEntry,
+    `import __plugin from ${JSON.stringify(relEntry)};\n` +
+      `globalThis.__pluginExport = __plugin;\n`
+  );
+
   const buildOptions = {
-    entryPoints: [entry],
+    entryPoints: [wrapperEntry],
     bundle: true,
     minify: true,
     format: "iife",
-    globalName: "plugin",
     target: "esnext",
     outfile: outFile,
     plugins: [vendettaGlobalsPlugin],
@@ -123,6 +147,33 @@ for (const folder of pluginFolders) {
   } else {
     await build(buildOptions);
   }
+
+  rmSync(wrapperEntry, { force: true });
+
+  /**
+   * esbuild's IIFE output ends in a fixed, predictable closing pattern:
+   * `...;})();` (optionally with a trailing newline). Vendetta-family
+   * loaders expect the fetched script to evaluate to the plugin object,
+   * which requires the LAST statement inside the IIFE to be a `return`
+   * — appending a return after the IIFE closes (e.g. via esbuild's
+   * `footer`) produces a top-level `return` outside any function, which
+   * is a SyntaxError. So instead we splice `return globalThis.__pluginExport;`
+   * in immediately before the closing `})();`, keeping it inside the
+   * function body where a return is valid, and delete the temporary
+   * global afterward so nothing leaks into the client runtime.
+   */
+  let built = readFileSync(outFile, "utf-8").trimEnd();
+  if (!built.endsWith("})();")) {
+    throw new Error(
+      `Unexpected esbuild IIFE output shape for "${folder}" — expected the ` +
+        `bundle to end with "})();" so a return statement could be spliced ` +
+        `in before it, but it ended with: ${JSON.stringify(built.slice(-40))}`
+    );
+  }
+  built = built.slice(0, -"})();".length) +
+    "var __r=globalThis.__pluginExport;delete globalThis.__pluginExport;return __r;" +
+    "})();";
+  writeFileSync(outFile, built);
 
   /**
    * Vendetta/Revenge/Shiggycord-family loaders verify plugin integrity by
