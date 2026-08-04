@@ -1,10 +1,10 @@
 {
   "name": "AlwaysAnimate",
-  "description": "Always all animates guild icons and avatars.",
+  "description": "Always animates guild icons and avatars.",
   "authors": [
     { "name": "Cynosphere", "id": "150745989836308480" }
   ],
-  "main": "index.js",
+  "main": "src/index.tsx",
   "vendetta": {
     "icon": "icon-qs-gifs"
   }
